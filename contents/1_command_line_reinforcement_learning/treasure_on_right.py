@@ -13,7 +13,7 @@ import time
 np.random.seed(2)  # reproducible
 
 ACTIONS       = ['left', 'right']     # available actions
-MAX_EPISODES = 2    # maximum episodes (like epochs)
+MAX_EPISODES = 4    # maximum episodes (like epochs)
 N_STATES     = 6    # the length of the 1 dimensional world has 6 stairs
 EPSILON      = 0.9  # greedy police
 ALPHA        = 0.1  # learning rate
@@ -32,13 +32,14 @@ def init_q_table(n_states, actions):
 
 def print_env(S, episode, step_counter):
     # This is how environment be updated
+    print('\n')
     env_list = ['-']*(N_STATES-1) + ['T']   # '---------T' our environment
     #print (env_list)
-    if S == 'terminal':
-        interaction = 'Episode %s: total_steps = %s' % (episode+1, step_counter)
+    if S == 'end---------------------------':
+        interaction = '------------------Episode %s: total_steps = %s' % (episode+1, step_counter)
         print('\r{}'.format(interaction), end='')
         time.sleep(2)
-        print('\r                                ', end='')
+        print('\r    got the end  ===============================                            ', end='')
     else:
         env_list[S] = 'o'
         interaction = ''.join(env_list)
@@ -60,7 +61,7 @@ def get_env_feedback(S, A):
     # This is how agent will interact with the environment
     if A == 'right':    # move right
         if S == N_STATES - 2:   # terminate
-            S_ = 'terminal'
+            S_ = 'end---------------------------'
             R = 1# REWARD=1
         else:
             S_ = S + 1
@@ -79,6 +80,7 @@ def get_env_feedback(S, A):
 def rl():
     # main part of RL loop
     for episode in range(MAX_EPISODES):
+        print (f'\nEpisode #{episode+1} ot of {MAX_EPISODES}')
         step_counter = 0
         S = 0 # S= STATE, or current stair
         is_terminated = False
@@ -86,15 +88,20 @@ def rl():
         while not is_terminated:
 
             A = choose_action(S, q_table) #A=Action (left or right)
+            print (f'\nchose action : {A}')
             S_, R = get_env_feedback(S, A)  # take action & get next state and reward
+            print (f'q_reward {R} . u r @ {S_} ')
             q_predict = q_table.loc[S, A]
-            if S_ != 'terminal':
+            print (f'q_predict {q_predict}')
+            if S_ != 'end---------------------------':
                 q_target = R + GAMMA * q_table.iloc[S_, :].max()   # next state is not terminal
             else:
                 q_target = R     # next state is terminal
                 is_terminated = True    # terminate this episode
-
-            q_table.loc[S, A] += ALPHA * (q_target - q_predict)  # update
+            print (f'q_target  {q_target}')
+            update = ALPHA * (q_target - q_predict)
+            print (f'q_update  {update}')
+            q_table.loc[S, A] +=  update # update
             S = S_  # move to next state
 
             print_env(S, episode, step_counter + 1)
