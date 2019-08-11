@@ -13,7 +13,7 @@ import time
 np.random.seed(2)  # reproducible
 
 ACTIONS       = ['left', 'right']     # available actions
-MAX_EPISODES = 4    # maximum episodes (like epochs)
+MAX_EPISODES = 8   # maximum episodes (like epochs).  1 episode = one a sequence of states, actions and rewards, which ends with terminal state. for ex.  , playing an entire game can be considered as 1 episode
 N_STATES     = 6    # the length of the 1 dimensional world has 6 stairs
 EPSILON      = 0.9  # greedy police
 ALPHA        = 0.1  # learning rate
@@ -39,7 +39,9 @@ def print_env(S, episode, step_counter):
         interaction = '------------------Episode %s: total_steps = %s' % (episode+1, step_counter)
         print('\r{}'.format(interaction), end='')
         time.sleep(2)
-        print('\r    got the end  ===============================                            ', end='')
+        print('\r    =================     got the end   ===============================                            ', end='')
+        print('\r\nQ-table curr result:\n')
+        print(q_table)
     else:
         env_list[S] = 'o'
         interaction = ''.join(env_list)
@@ -49,11 +51,12 @@ def print_env(S, episode, step_counter):
 
 def choose_action(state, q_table):
     # This is how to choose an action
-    state_actions = q_table.iloc[state, :]
-    if (np.random.uniform() > EPSILON) or ((state_actions == 0).all()):  # act non-greedy or state-action have no value
+    qualityOfCurrState = q_table.iloc[state, :]
+    print(f'\nstate_actions={qualityOfCurrState.values}')
+    if (np.random.uniform() > EPSILON) or ((qualityOfCurrState == 0).all()):  # act non-greedy or state-action have no value
         action_name = np.random.choice(ACTIONS)
     else:   # act greedy
-        action_name = state_actions.idxmax()    # replace argmax to idxmax as argmax means a different function in newer version of pandas
+        action_name = qualityOfCurrState.idxmax()    # replace argmax to idxmax as argmax means a different function in newer version of pandas
     return action_name
 
 
@@ -62,49 +65,49 @@ def get_env_feedback(S, A):
     if A == 'right':    # move right
         if S == N_STATES - 2:   # terminate
             S_ = 'end---------------------------'
-            R = 1# REWARD=1
+            REWARD = 1# REWARD=1 instead of labeling data in RL we use feedback reward and it  sometimes  delayed
         else:
             S_ = S + 1
-            R = 0# REWARD=0
+            REWARD = 0# REWARD=0
     else:   # move left
-        R = 0
+        REWARD = 0
         if S == 0:
             S_ = S  # reach the wall
         else:
             S_ = S - 1
-    return S_, R
+    return S_, REWARD
 
 
 
 
-def rl():
+def rl_agent():
     # main part of RL loop
-    for episode in range(MAX_EPISODES):
+    for episode in range(MAX_EPISODES):#agent's goal is to maximise the REWARD on given episode
         print (f'\nEpisode #{episode+1} ot of {MAX_EPISODES}')
         step_counter = 0
-        S = 0 # S= STATE, or current stair
+        step = 0 # S= STATE, or current stair
         is_terminated = False
-        print_env(S, episode, step_counter)
+        print_env(step, episode, step_counter)
         while not is_terminated:
 
-            A = choose_action(S, q_table) #A=Action (left or right)
-            print (f'\nchose action : {A}')
-            S_, R = get_env_feedback(S, A)  # take action & get next state and reward
-            print (f'q_reward {R} . u r @ {S_} ')
-            q_predict = q_table.loc[S, A]
+            action = choose_action(step, q_table) #A=Action (left or right)
+            print (f'chose action : {action}')
+            step_, reward = get_env_feedback(step, action)  # take action & get next state and reward
+            print (f'q_reward {reward} . u r @ {step_} ')
+            q_predict = q_table.loc[step, action]
             print (f'q_predict {q_predict}')
-            if S_ != 'end---------------------------':
-                q_target = R + GAMMA * q_table.iloc[S_, :].max()   # next state is not terminal
+            if step_ != 'end---------------------------':
+                q_target = reward + GAMMA * q_table.iloc[step_, :].max()   # next state is not end
             else:
-                q_target = R     # next state is terminal
+                q_target = reward     # next state is end
                 is_terminated = True    # terminate this episode
             print (f'q_target  {q_target}')
             update = ALPHA * (q_target - q_predict)
             print (f'q_update  {update}')
-            q_table.loc[S, A] +=  update # update
-            S = S_  # move to next state
+            q_table.loc[step, action] +=  update # update
+            step = step_  # move to next state
 
-            print_env(S, episode, step_counter + 1)
+            print_env(step, episode, step_counter + 1)
             step_counter += 1
     return q_table
 
@@ -112,10 +115,14 @@ def rl():
 
 if __name__ == "__main__":
 
+    np.set_printoptions(precision=5)
+    np.set_printoptions(suppress=True) #prevent numpy exponential #notation on print, default False
+
+
     q_table = init_q_table(N_STATES, ACTIONS)
     print('\r\nQ-table initialized:\n')
     print(q_table)
 
-    q_table = rl()
+    q_table = rl_agent()
     print('\r\nQ-table end result:\n')
     print(q_table)
