@@ -22,12 +22,12 @@ SLEEP_TIME   = 0.3  # fresh time for one move
 
 
 def init_q_table(n_states, actions):
-    table = pd.DataFrame(
+    value_table = pd.DataFrame(
         np.zeros((n_states, len(actions))),     # q_table initial values
         columns=actions,    # actions's name
     )
-    # print(table)    # show table
-    return table
+    # print(table)    # show table of curr state of weights what action is best. once the state is known, the   history may be thrown
+    return value_table
 
 
 def print_env(S, episode, step_counter):
@@ -41,7 +41,7 @@ def print_env(S, episode, step_counter):
         time.sleep(2)
         print('\r    =================     got the end   ===============================                            ', end='')
         print('\r\nQ-table curr result:\n')
-        print(q_table)
+        print(map_state2value)
     else:
         env_list[S] = 'o'
         interaction = ''.join(env_list)
@@ -49,7 +49,7 @@ def print_env(S, episode, step_counter):
         time.sleep(SLEEP_TIME)
 
 
-def choose_action(state, q_table):
+def choose_policy_action(state, q_table):
     # This is how to choose an action
     qualityOfCurrState = q_table.iloc[state, :]
     print(f'\nstate_actions={qualityOfCurrState.values}')
@@ -60,7 +60,7 @@ def choose_action(state, q_table):
     return action_name
 
 
-def get_env_feedback(S, A):
+def get_env_feedback_value(S, A):
     # This is how agent will interact with the environment
     if A == 'right':    # move right
         if S == N_STATES - 2:   # terminate
@@ -80,36 +80,36 @@ def get_env_feedback(S, A):
 
 
 
-def rl_agent():
+def rl():
     # main part of RL loop
     for episode in range(MAX_EPISODES):#agent's goal is to maximise the REWARD on given episode
         print (f'\nEpisode #{episode+1} ot of {MAX_EPISODES}')
         step_counter = 0
-        step = 0 # S= STATE, or current stair
+        agent_state = 0 # S= STATE, or current stair
         is_terminated = False
-        print_env(step, episode, step_counter)
+        print_env(agent_state, episode, step_counter)
         while not is_terminated:
 
-            action = choose_action(step, q_table) #A=Action (left or right)
+            action = choose_policy_action(agent_state, map_state2value) #A=Action (left or right)
             print (f'chose action : {action}')
-            step_, reward = get_env_feedback(step, action)  # take action & get next state and reward
-            print (f'q_reward {reward} . u r @ {step_} ')
-            q_predict = q_table.loc[step, action]
+            agent_state_next, reward = get_env_feedback_value(agent_state, action)  # take action & get next state and reward
+            print (f'q_reward {reward} . u r @ {agent_state_next} ')
+            q_predict = map_state2value.loc[agent_state, action]
             print (f'q_predict {q_predict}')
-            if step_ != 'end---------------------------':
-                q_target = reward + GAMMA * q_table.iloc[step_, :].max()   # next state is not end
+            if agent_state_next != 'end---------------------------':
+                q_target = reward + GAMMA * map_state2value.iloc[agent_state_next, :].max()   # next state is not end
             else:
                 q_target = reward     # next state is end
                 is_terminated = True    # terminate this episode
             print (f'q_target  {q_target}')
             update = ALPHA * (q_target - q_predict)
             print (f'q_update  {update}')
-            q_table.loc[step, action] +=  update # update
-            step = step_  # move to next state
+            map_state2value.loc[agent_state, action] +=  update # update
+            agent_state = agent_state_next  #state is the agent's location which move to next state
 
-            print_env(step, episode, step_counter + 1)
+            print_env(agent_state, episode, step_counter + 1)
             step_counter += 1
-    return q_table
+    return map_state2value
 
 
 
@@ -117,12 +117,24 @@ if __name__ == "__main__":
 
     np.set_printoptions(precision=5)
     np.set_printoptions(suppress=True) #prevent numpy exponential #notation on print, default False
-
-
-    q_table = init_q_table(N_STATES, ACTIONS)
+    '''where are the
+    1. algorithm model for value? this is a model free prediction and control (e.g. q-learning), it just use the agent_state
+    1. algorithm model for policy? this is a model free rl, it just use the agent_state
+    2. observations?
+    3. policy map_state2action? is it value free rl? where nn : a3c, pg
+    4. value?  is it policy free rl? where nn : ddqn , dqn
+    5. exploration?
+    6. exploitation?
+    7. env state?
+    8. agent state?
+    9. why we need prediction here?
+    10. where is planning?
+    11. where is actor-critic?
+    '''
+    map_state2value = init_q_table(N_STATES, ACTIONS)
     print('\r\nQ-table initialized:\n')
-    print(q_table)
+    print(map_state2value)
 
-    q_table = rl_agent()
+    map_state2value = rl()
     print('\r\nQ-table end result:\n')
-    print(q_table)
+    print(map_state2value)

@@ -11,7 +11,6 @@ The RL is in RL_brain.py.
 
 View more on my tutorial page: https://morvanzhou.github.io/tutorials/
 """
-
 from maze_env import Maze
 from RL_brain import QLearningTable
 
@@ -46,6 +45,7 @@ def update():
     env.destroy()
 
 if __name__ == "__main__":
+    print ('start maze')
     env = Maze()
     RL = QLearningTable(actions=list(range(env.n_actions)))
 
